@@ -20,7 +20,7 @@ export const add_package = asyncHandler(async (req, res) => {
     const updated_body = {
         ...reqBody,
         createdBy: user?.id,
-        updatedBy: user?.id
+        updatedBy: user?._id
     };
 
     console.log("updated body => ", updated_body)

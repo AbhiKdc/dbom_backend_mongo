@@ -31,7 +31,7 @@ export const add_supplier = asyncHandler(async (req, res) => {
         const updated_body = {
             ...supplier_details,
             createdBy: user?.id,
-            updatedBy: user?.id,
+            updatedBy: user?._id,
         };
 
         const add_supplier_result = await supplier_model.create(updated_body, {
@@ -46,7 +46,7 @@ export const add_supplier = asyncHandler(async (req, res) => {
                 ...item,
                 supplierId: add_supplier_result?.toJSON()?.id,
                 createdBy: user?.id,
-                updatedBy: user?.id,
+                updatedBy: user?._id,
             };
         });
         const add_supplier_branch_result = await supplier_branch_model.bulkCreate(

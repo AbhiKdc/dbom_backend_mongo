@@ -14,7 +14,7 @@ export const add_organisation = asyncHandler(async (req, res) => {
     const updated_body = {
         ...reqBody,
         createdBy: user?.id,
-        updatedBy: user?.id
+        updatedBy: user?._id
     };
 
     const add_org_result = await organisation_model.create(updated_body);
@@ -40,7 +40,7 @@ export const update_organisation = asyncHandler(async (req, res) => {
     }
     const updated_body = {
         ...reqBody,
-        updatedBy: user?.id
+        updatedBy: user?._id
     };
 
     const updated_result = await organisation_model.findOneAndUpdate(

@@ -20,7 +20,7 @@ export const add_block = asyncHandler(async (req, res) => {
     const updated_body = {
         ...reqBody,
         createdBy: user?.id,
-        updatedBy: user?.id
+        updatedBy: user?._id
     };
 
     const add_block_result = await block_model.create(updated_body);
@@ -46,15 +46,15 @@ export const update_block = asyncHandler(async (req, res) => {
 
     const updated_body = {
         ...reqBody,
-        updatedBy: user?.id
+        updatedBy: user?._id
     };
 
     const updated_result = await block_model.findOneAndUpdate(
-        {_id:id},
+        { _id: id },
         {
-            $set:updated_body
+            $set: updated_body
         },
-        {new:true}
+        { new: true }
     );
 
     if (!updated_result) {
@@ -131,7 +131,7 @@ export const list_all_blocks = asyncHandler(async (req, res, next) => {
                     {
                         $project: {
                             packageName: 1,
-                            state:1
+                            state: 1
                         }
                     }
                 ],
@@ -152,7 +152,7 @@ export const list_all_blocks = asyncHandler(async (req, res, next) => {
                 pipeline: [
                     {
                         $project: {
-                            district:1,
+                            district: 1,
                             districtCode: 1
                         }
                     }
@@ -207,20 +207,20 @@ export const list_all_blocks = asyncHandler(async (req, res, next) => {
 export const dropdown_block = asyncHandler(async (req, res) => {
     const { id } = req.query
     const match_query = {
-        status:true
+        status: true
     }
 
-    if(id){
+    if (id) {
         match_query.districtId = mongoose.Types.ObjectId.createFromHexString(id)
     }
 
     const all_packages = await block_model.aggregate([
         {
-            $match:match_query
+            $match: match_query
         },
         {
-            $project:{
-                blockName:1
+            $project: {
+                blockName: 1
             }
         }
     ]);

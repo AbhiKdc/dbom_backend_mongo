@@ -19,7 +19,7 @@ export const add_district = asyncHandler(async (req, res) => {
     const updated_body = {
         ...reqBody,
         createdBy: user?.id,
-        updatedBy: user?.id
+        updatedBy: user?._id
     };
 
     const add_district_result = await district_model.create(updated_body);
@@ -45,7 +45,7 @@ export const updated_district = asyncHandler(async (req, res) => {
 
     const updated_body = {
         ...reqBody,
-        updatedBy: user?.id
+        updatedBy: user?._id
     };
 
     const updated_result = await district_model.findOneAndUpdate(

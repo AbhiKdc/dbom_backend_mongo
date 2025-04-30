@@ -15,7 +15,7 @@ export const add_gp = asyncHandler(async (req, res) => {
     const updated_body = {
         ...reqBody,
         createdBy: user?.id,
-        updatedBy: user?.id
+        updatedBy: user?._id
     };
     const add_category_result = await gp_model.create(updated_body);
 

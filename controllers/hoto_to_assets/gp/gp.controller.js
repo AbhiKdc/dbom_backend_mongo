@@ -503,7 +503,7 @@ export const add_gp_replacement_request = asyncHandler(async (req, res) => {
     const updated_body = {
         ...reqBody,
         createdBy: user?.id,
-        updatedBy: user?.id,
+        updatedBy: user?._id,
     };
 
     const add_replacement_result = await gp_replacement_model.create(updated_body, { returning: true });

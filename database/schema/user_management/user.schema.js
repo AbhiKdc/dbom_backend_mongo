@@ -4,13 +4,11 @@ const { Schema } = mongoose;
 const userSchema = new Schema({
   organisationId: {
     type: Schema.Types.ObjectId,
-    required: [true, 'Organisation ID is required'],
-    ref: 'Organisation',
+    // required: [true, 'Organisation ID is required'],
   },
   departmentId: {
     type: Schema.Types.ObjectId,
-    required: [true, 'Department ID is required'],
-    ref: 'Department',
+    // required: [true, 'Department ID is required'],
   },
   teamId: {
     type: Schema.Types.ObjectId,
@@ -88,13 +86,13 @@ const userSchema = new Schema({
   },
   createdBy: {
     type: Schema.Types.ObjectId,
-    ref: 'User',
     default: null,
+    required:[true,"createdBy is required"]
   },
   updatedBy: {
     type: Schema.Types.ObjectId,
-    ref: 'User',
     default: null,
+    required:[true,"updatedBy is required"]
   }
 }, {
   timestamps: true,

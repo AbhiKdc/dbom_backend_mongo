@@ -12,7 +12,7 @@ export const add_material = asyncHandler(async (req, res) => {
     const updated_body = {
         ...reqBody,
         createdBy: user?.id,
-        updatedBy: user?.id
+        updatedBy: user?._id
     };
     const add_category_result = await material_model.create(updated_body);
 

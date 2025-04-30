@@ -20,7 +20,7 @@ export const add_block_replacement_request = asyncHandler(async (req, res) => {
     const updated_body = {
         ...reqBody,
         createdBy: user?.id,
-        updatedBy: user?.id,
+        updatedBy: user?._id,
     };
 
     const add_replacement_result = await block_replacement_model.create(updated_body, { returning: true });

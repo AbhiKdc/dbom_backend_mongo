@@ -14,7 +14,7 @@ export const add_category = asyncHandler(async (req, res) => {
     const updated_body = {
         ...reqBody,
         createdBy: user?.id,
-        updatedBy: user?.id
+        updatedBy: user?._id
     };
     const add_category_result = await category_model.create(updated_body);
 

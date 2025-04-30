@@ -14,7 +14,7 @@ export const add_hsn_code = asyncHandler(async (req, res) => {
     const updated_body = {
         ...reqBody,
         createdBy: user?.id,
-        updatedBy: user?.id
+        updatedBy: user?._id
     };
     const add_category_result = await hsn_code_model.create(updated_body);
 
