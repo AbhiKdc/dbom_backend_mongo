@@ -545,7 +545,7 @@ export const listingUsersDetails = asyncHandler(async (req, res, next) => {
     ];
 
     const countResult = await user_model.aggregate(countPipeline);
-    const totalCount = countResult[0]?.totalCount || 0;
+    const totalCount = countResult?.[0]?.totalCount || 0;
     const totalPages = Math.ceil(totalCount / limit);
 
     const response = new ApiResponse(

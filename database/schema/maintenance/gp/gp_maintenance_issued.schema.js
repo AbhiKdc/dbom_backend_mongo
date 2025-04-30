@@ -1,11 +1,23 @@
 import mongoose from "mongoose";
 
-const GPMaintenanceRequestSchema = new mongoose.Schema(
+const gp_maintenance_issued_schema = new mongoose.Schema(
     {
+        maintenance_request_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: [true, "Maintenance request ID is required."],
+        },
         maintenance_id: {
             type: Number,
             required: [true, "Maintenance ID is required."],
             unique: true,
+        },
+        issue_date: {
+            type: Date,
+            default: Date.now,
+        },
+        estimate_arrival_date: {
+            type: Date,
+            default: Date.now,
         },
         assets_id: {
             type: mongoose.Schema.Types.ObjectId,
@@ -35,13 +47,17 @@ const GPMaintenanceRequestSchema = new mongoose.Schema(
             type: String,
             required: [true, "issue reported is required"]
         },
-        is_cancelled: {
-            type: Boolean,
-            default: false,
+        assign_to: {
+            type: String,
+            required: [true, "Assigned user is required."],
         },
-        is_created: {
-            type: Boolean,
-            default: false,
+        repair_status: {
+            type: String,
+            enum: {
+                values: ["installed", "under_repair", "repaired"],
+                message: "Repair status {VALUE} must be one of 'installed', 'under_repair', or 'repaired'."
+            },
+            default: "under_repair",
         },
         remarks: {
             type: String,
@@ -61,10 +77,10 @@ const GPMaintenanceRequestSchema = new mongoose.Schema(
     }
 );
 
-const gp_maintenance_request_model = mongoose.model(
-    "gp_maintenance_request",
-    GPMaintenanceRequestSchema,
-    "gp_maintenance_request"
+const gp_maintenance_model = mongoose.model(
+    "gp_maintenance_issued",
+    gp_maintenance_issued_schema,
+    "gp_maintenance_issued"
 );
 
-export default gp_maintenance_request_model;
+export default gp_maintenance_model;

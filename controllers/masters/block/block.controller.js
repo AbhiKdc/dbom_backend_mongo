@@ -188,7 +188,7 @@ export const list_all_blocks = asyncHandler(async (req, res, next) => {
     ];
 
     const countResult = await block_model.aggregate(countPipeline);
-    const totalCount = countResult[0]?.totalCount || 0;
+    const totalCount = countResult?.[0]?.totalCount || 0;
     const totalPages = Math.ceil(totalCount / limit);
 
     const response = new ApiResponse(

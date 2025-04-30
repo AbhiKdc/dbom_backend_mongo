@@ -1,11 +1,12 @@
-import { Op } from "sequelize";
-import ApiError from "../../../utils/errors/apiError.js";
-import asyncHandler from "../../../utils/errors/catchAsync.js";
+import mongoose from "mongoose";
 import gp_equipment_details_model from "../../../database/schema/hoto_assets/gp_equipment_details.model.js";
 import gp_maintenance_request_model from "../../../database/schema/maintenance/gp/gp_maintenance_request.schema.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { StatusCodes } from "../../../utils/constants.js";
-import { user_management_includes } from "../../user_management/contanst.js";
+import { DynamicSearch } from "../../../utils/dynamicSearch/dynamic.js";
+import ApiError from "../../../utils/errors/apiError.js";
+import asyncHandler from "../../../utils/errors/catchAsync.js";
+import { userManagementLookup } from "../../user_management/contanst.js";
 
 export const add_maintenance_request = asyncHandler(async (req, res, next) => {
     const userDetails = req.user;
@@ -15,11 +16,9 @@ export const add_maintenance_request = asyncHandler(async (req, res, next) => {
         throw new ApiError("Assets id is required or assets id must be array");
     };
 
-    const assets_details = await gp_equipment_details_model.findAll({
-        where: {
-            id: {
-                [Op.in]: assets_ids,
-            }
+    const assets_details = await gp_equipment_details_model.find({
+        id: {
+            $in: assets_ids,
         }
     });
 
@@ -29,21 +28,20 @@ export const add_maintenance_request = asyncHandler(async (req, res, next) => {
 
     const maintenance_request_data = assets_details?.map((ele) => {
         return {
-            assets_id: ele?.id,
+            assets_id: ele?._id,
             assets_details: ele,
             repair_type: other_details?.repair_type,
             maintenance_type: other_details?.maintenance_type,
             issue_reported: other_details?.issue_reported,
             initiated_by: other_details?.initiated_by,
             remarks: other_details?.remarks,
-            created_by: userDetails?.id,
-            updated_by: userDetails?.id,
+            created_by: userDetails?._id,
+            updated_by: userDetails?._id,
         }
     });
 
-    const insert_maintenance_request_data = await gp_maintenance_request_model.bulkCreate(
+    const insert_maintenance_request_data = await gp_maintenance_request_model.insertMany(
         maintenance_request_data,
-        { returning: true }
     );
 
     if (insert_maintenance_request_data?.length === 0) {
@@ -59,17 +57,60 @@ export const add_maintenance_request = asyncHandler(async (req, res, next) => {
     return res.status(StatusCodes.CREATED).json(response);
 });
 
+export const cancel_maintenance_request = asyncHandler(async (req, res, next) => {
+    const userDetails = req.user;
+    const { maintenance_request_id } = req.params;
+
+    if (!maintenance_request_id || !Array.isArray(maintenance_request_id)) {
+        throw new ApiError("Invalid maintenance_request_id");
+    };
+
+    const cancel_gp_maintenance_request = await gp_maintenance_request_model.findOneAndUpdate(
+        { _id: maintenance_request_id },
+        {
+            $set: {
+                is_cancelled: true,
+                updatedBy:userDetails?._id
+            }
+        },
+        { new: true }
+    );
+
+    if(!cancel_gp_maintenance_request){
+        throw new ApiError("Failed to cancel maintenance request",StatusCodes?.BAD_REQUEST);
+    }
+
+    const response = new ApiResponse(
+        StatusCodes.OK,
+        "Maintenance request has been cancelled",
+        cancel_gp_maintenance_request
+    );
+
+    return res.status(StatusCodes.OK).json(response);
+});
+
 export const single_fetch_maintenance_request = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
 
-    if (!id) return next(new ApiError("id is required", StatusCodes.BAD_GATEWAY));
+    if (!id || !mongoose.isValidObjectId(id)) {
+        return next(new ApiError("Invalid Id", StatusCodes.BAD_GATEWAY));
+    }
 
-    const maintenance_request_data = await gp_maintenance_request_model.findOne({
-        where: { id: id },
-        include: [
-            ...user_management_includes
-        ]
-    });
+    const match_agg = {
+        $match: {
+            _id: mongoose.Types.ObjectId.createFromHexString(id)
+        }
+    }
+    const user_lookup_agg = [
+        ...userManagementLookup
+    ]
+    const fetch_maintenance_request_data = await gp_maintenance_request_model.aggregate([
+        match_agg,
+        user_lookup_agg
+    ]);
+
+    const maintenance_request_data = fetch_maintenance_request_data?.[0];
+
     if (!maintenance_request_data) {
         throw new ApiError("data not found", StatusCodes.NOT_FOUND)
     }
@@ -84,112 +125,89 @@ export const single_fetch_maintenance_request = asyncHandler(async (req, res, ne
 });
 
 export const listing_maintenance_request = asyncHandler(async (req, res, next) => {
-    const search = req.query.search || null;
-    const page = req.query.page || 1;
-    const limit = req.query.limit || 10;
-    const filters = req.body?.filters || {}
-    const sort_field = req.body?.sort_field || "createdAt"
-    const sort = req.body?.sort || "desc"
+    const {
+        page = 1,
+        limit = 10,
+        search = '',
+        sort_field = 'updatedAt',
+        sort = 'desc',
+    } = req.query;
 
-    const matchQuery = {
-        status: true
+    const filter = req.body?.filters || {};
+
+    let search_query = {};
+    if (search != '' && req?.body?.searchFields) {
+        const search_data = DynamicSearch(
+            search,
+            boolean,
+            numbers,
+            string,
+            arrayField
+        );
+        if (search_data?.length == 0) {
+            throw new ApiError("Result not found", StatusCodes.NOT_FOUND);
+        }
+        search_query = search_data;
+    }
+
+    const filterData = dynamic_filter(filter);
+
+    const matchStage = {
+        $match: {
+            ...search_query,
+            ...filterData,
+        },
     };
 
-    if (search) {
-        const search_fields = ['firstName', 'lastName', 'email', 'mobileNo', 'address', 'state', 'city', '$organisation_details.organisationName$', '$department_details.departmentName$', '$team_details.teamName$'];
-        const search_conditions = [];
-
-        search_fields?.forEach((field) => {
-            search_conditions.push({
-                [field]: {
-                    [Op.iLike]: `%${search}%`,
-                },
-            });
-        });
-
-        if (search_conditions?.length > 0) {
-            matchQuery[Op.or] = search_conditions
-        }
-    }
-    const filter_conditions = [];
-    if (Object.keys(filters)?.length > 0) {
-        for (let [field, value] of Object.entries(filters)) {
-            switch (true) {
-                case field?.includes('.'):
-                    const [model, nested_field] = field?.split('.');
-                    filter_conditions?.push({ [`$${model}.${nested_field}$`]: value });
-                    break;
-
-                case Array.isArray(value) && value?.length == 2:
-                    filter_conditions.push({
-                        [field]: {
-                            [Op.between]: value,
-                        },
-                    });
-                    break;
-
-                case Array.isArray(value):
-                    filter_conditions.push({
-                        [field]: {
-                            [Op.in]: value,
-                        },
-                    });
-                    break;
-                case value instanceof Date:
-                    filter_conditions.push({
-                        [field]: {
-                            [Op.eq]: value,
-                        },
-                    });
-                    break;
-
-                default:
-                    filter_conditions?.push({ [field]: value });
-                    break;
-            }
-        }
-    }
-
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const order = [[sort_field, sort?.toUpperCase()]];
-
-    const { rows, count } = await user_model.findAndCountAll({
-        where: {
-            ...matchQuery,
-            [Op.and]: filter_conditions
+    const sortStage = {
+        $sort: {
+            [sort_field]: sort.toLowerCase() === 'desc' ? -1 : 1,
         },
-        include: [
-            ...user_management_includes,
-            {
-                model: organisation_model,
-                required: true,
-                as: 'organisation_details',
-                attributes: ["id", "organisationName"]
-            },
-            {
-                model: department_model,
-                required: true,
-                as: 'department_details',
-                attributes: ["id", "departmentName"]
-            },
-            {
-                model: team_model,
-                required: true,
-                as: 'team_details',
-                attributes: ["id", "teamName"]
-            }
-        ],
-        offset,
-        limit: parseInt(limit),
-        order,
-    });
+    };
 
-    const total_pages = Math.ceil(count / limit);
+    const skipStage = {
+        $skip: (parseInt(page) - 1) * parseInt(limit),
+    };
+
+    const limitStage = {
+        $limit: parseInt(limit),
+    };
+
+    const lookups = [
+        ...userManagementLookup,
+    ];
+
+    const aggregationPipeline = [
+        ...lookups,
+        matchStage,
+        sortStage,
+        skipStage,
+        limitStage,
+    ];
+
+    const all_details = await gp_maintenance_request_model.aggregate(aggregationPipeline);
+
+    // Count total documents
+    const countPipeline = [
+        ...lookups,
+        matchStage,
+        {
+            $count: 'totalCount',
+        },
+    ];
+
+    const countResult = await gp_maintenance_request_model.aggregate(countPipeline);
+    const totalCount = countResult?.[0]?.totalCount || 0;
+    const totalPages = Math.ceil(totalCount / limit);
 
     const response = new ApiResponse(
         StatusCodes.OK,
-        "user details fetched successfully",
-        { data: rows, total_pages: total_pages }
+        'Data fetched successfully',
+        {
+            data: all_details,
+            total_pages: totalPages,
+        }
     );
+
     return res.status(StatusCodes.OK).json(response);
-})
+});
