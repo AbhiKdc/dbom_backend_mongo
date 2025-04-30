@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { add_survey_data, fetch_block_details, fetch_equipment_details_by_block, fetch_equipment_details_by_gp, fetch_gp_details } from "../../controllers/hoto_to_assets/gp/gp.controller.js";
+import {
+    add_survey_data,
+    fetch_block_details,
+    fetch_equipment_details_by_block,
+    fetch_equipment_details_by_gp,
+    fetch_gp_details
+} from "../../controllers/hoto_to_assets/gp/gp.controller.js";
 
 const survey_router = Router();
 
